@@ -1,11 +1,5 @@
 console.log('Hello tensorflow')
 
-/**
- * Section 3: Load format and visualise the input data
- * Get the car data reduced to just the variables we're interested in
- * and cleaned of missing data
- */
-
 async function getData() {
   console.log('Getting car data')
   const carsDataReq = await fetch('https://storage.googleapis.com/tfjs-tutorials/carsData.json')
@@ -19,6 +13,18 @@ async function getData() {
   console.log('Car data clean. Returning')
 
   return cleaned
+}
+
+function createModel() {
+  console.log('Initializing model')
+  const model = tf.sequential()
+
+  console.log('Initializing input layer')
+  model.add(tf.layers.dense({ inputShape: [1], units: 1, useBias: true }))
+  console.log('Initializing oputput layer')
+  model.add(tf.layers.dense({ units: 1, useBias: true }))
+
+  return model
 }
 
 async function run() {
@@ -42,6 +48,11 @@ async function run() {
     }
   )
   console.log('Scatterplot rendered')
+
+  console.log('Create model instance')
+  const model = createModel()
+  console.log('Displaying model summary')
+  tfvis.show.modelSummary({ name: 'Model Summary' }, model)
 }
 
 document.addEventListener('DOMContentLoaded', run)
