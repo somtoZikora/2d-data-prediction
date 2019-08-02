@@ -20,7 +20,13 @@ function createModel() {
   const model = tf.sequential()
 
   console.log('Initializing input layer')
-  model.add(tf.layers.dense({ inputShape: [1], units: 1, useBias: true }))
+  model.add(tf.layers.dense({ inputShape: [1], units: 150, useBias: true }))
+  model.add(tf.layers.dense({ units: 50, activation: 'sigmoid' }))
+  model.add(tf.layers.dense({ units: 50, activation: 'sigmoid' }))
+  model.add(tf.layers.dense({ units: 50, activation: 'sigmoid' }))
+  model.add(tf.layers.dense({ units: 50, activation: 'sigmoid' }))
+  model.add(tf.layers.dense({ units: 50, activation: 'sigmoid' }))
+  model.add(tf.layers.dense({ units: 50, activation: 'sigmoid' }))
   console.log('Initializing oputput layer')
   model.add(tf.layers.dense({ units: 1, useBias: true }))
 
@@ -69,7 +75,7 @@ async function trainModel(model, inputs, labels) {
   })
 
   const batchSize = 32;
-  const epochs = 50
+  const epochs = 100
 
   return await model.fit(inputs, labels, {
     batchSize,
@@ -81,6 +87,38 @@ async function trainModel(model, inputs, labels) {
       { height: 200, callbacks: ['onEpochEnd'] }
     )
   })
+}
+
+function testModel(model, inputData, normalizationData) {
+  const { inputMax, inputMin, labelMin, labelMax } = normalizationData
+
+  console.log('Generate predictions for a uniform range of numbers between 0 and 1')
+  console.log('We unnormalize the data by doing the inverse of the min-max scaling')
+  const [xs, preds] = tf.tidy(() => {
+    const xs = tf.linspace(0, 1, 100)
+    const preds = model.predict(xs.reshape([100, 1]))
+
+    const unnormalizedXs = xs.mul(inputMax.sub(inputMin)).add(inputMin)
+
+    const unnormalizedPreds = preds.mul(labelMax.sub(labelMin)).add(labelMin)
+
+    console.log('Unnormalizing data')
+    return [unnormalizedXs.dataSync(), unnormalizedPreds.dataSync()]
+  })
+
+  const predictedPoints = Array.from(xs).map((val, i) => ({ x: val, y: preds[i] }))
+
+  const originalPoints = inputData.map(d => ({ x: d.horsepower, y: d.mpg }))
+
+  tfvis.render.scatterplot(
+    { name: 'Model Predictions vs Original Data' },
+    { values: [originalPoints, predictedPoints], series: ['original', 'predicted'] },
+    {
+      xLabel: 'Horsepower',
+      yLabel: 'MPG',
+      height: 300
+    }
+  )
 }
 
 async function run() {
@@ -109,6 +147,14 @@ async function run() {
   const model = createModel()
   console.log('Displaying model summary')
   tfvis.show.modelSummary({ name: 'Model Summary' }, model)
+
+  console.log('Trainig model prediction')
+  const tensorData = convertToTensor(data)
+  const { inputs, labels } = tensorData
+  await trainModel(model, inputs, labels)
+  console.log('Done training')
+  testModel(model, data, tensorData)
+  console.log('DONE')
 }
 
 document.addEventListener('DOMContentLoaded', run)
